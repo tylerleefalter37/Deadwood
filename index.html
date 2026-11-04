@@ -1,0 +1,2316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
+<title>DEADWOOD: DUST, NERVES & LEAD</title>
+<style>
+  /* =========================================================
+     GRITTY 1870s DEADWOOD AESTHETIC (STRICTLY NO BLUE/YELLOW)
+     Dark charcoal, aged leather, bone white, burnt sienna
+     ========================================================= */
+  :root {
+    --bg-dark: #0b0704;
+    --bg-panel: #160e09;
+    --bg-card: #20130c;
+    --bg-card-hover: #2b1b11;
+    --text-primary: #ecd8be;
+    --text-muted: #9c7b63;
+    --text-bright: #ffffff;
+    --border-dark: #3a2012;
+    --border-accent: #6b361a;
+    --border-highlight: #934c26;
+    --accent-red: #8f2413;
+    --accent-red-hover: #b42f19;
+    --accent-gold: #c99355;
+    --dock-bg: #090503;
+    --badge-bg: #2d180f;
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    user-select: none;
+    -webkit-user-select: none;
+    font-family: 'Courier New', Courier, monospace;
+  }
+
+  body {
+    background-color: var(--bg-dark);
+    color: var(--text-primary);
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* --- SIMULATOR MAIN CONTAINER --- */
+  #sim-layer {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+    max-width: 960px;
+    margin: 0 auto;
+    position: relative;
+    background: var(--bg-dark);
+    box-shadow: 0 0 30px rgba(0,0,0,0.9);
+  }
+
+  /* --- TOP RESOURCE LEDGER --- */
+  #ledger-container {
+    background: var(--dock-bg);
+    border-bottom: 2px solid var(--border-dark);
+    padding: 8px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    z-index: 5;
+  }
+
+  .ledger-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+  }
+
+  .stat-cell {
+    background: #120905;
+    border: 1px solid var(--border-dark);
+    padding: 4px 6px;
+    text-align: center;
+    font-size: 11px;
+    font-weight: bold;
+    color: var(--text-muted);
+    border-radius: 2px;
+  }
+  .stat-cell span {
+    color: var(--text-bright);
+    font-size: 13px;
+    display: inline-block;
+    margin-left: 3px;
+  }
+  .stat-cell.ap-cell span {
+    color: #e07248;
+    letter-spacing: 1px;
+  }
+  .stat-cell.hp-cell span {
+    color: #df4430;
+  }
+
+  .ledger-quickbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px dashed var(--border-dark);
+    padding-top: 5px;
+    font-size: 12px;
+  }
+
+  .quickbar-left {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .quick-btn {
+    background: var(--bg-card);
+    border: 1px solid var(--border-accent);
+    color: var(--text-primary);
+    padding: 3px 9px;
+    font-size: 11px;
+    cursor: pointer;
+    font-weight: bold;
+    text-transform: uppercase;
+    transition: all 0.15s ease;
+  }
+  .quick-btn:hover {
+    background: var(--border-highlight);
+    color: #fff;
+  }
+  .sleep-btn {
+    background: var(--accent-red);
+    color: #fff;
+    border: 1px solid #c93b22;
+  }
+  .sleep-btn:hover {
+    background: var(--accent-red-hover);
+  }
+
+  /* --- CHRONICLE / EVENT LOG --- */
+  #chronicle-wrapper {
+    background: #0f0906;
+    border-bottom: 2px solid var(--border-dark);
+    padding: 10px 14px;
+    box-shadow: inset 0 2px 10px rgba(0,0,0,0.8);
+  }
+  .chronicle-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--text-muted);
+    font-weight: 900;
+  }
+  #event-log {
+    height: 180px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding-right: 6px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-accent) #0a0503;
+  }
+  #event-log::-webkit-scrollbar {
+    width: 5px;
+  }
+  #event-log::-webkit-scrollbar-thumb {
+    background: var(--border-accent);
+  }
+
+  .log-entry {
+    background: rgba(22, 14, 9, 0.7);
+    border-left: 3px solid var(--border-accent);
+    padding: 6px 10px;
+    font-size: 12px;
+    line-height: 1.45;
+    color: #d1bda9;
+  }
+  .log-entry .timestamp {
+    color: var(--text-muted);
+    font-weight: bold;
+    margin-right: 6px;
+  }
+  .log-entry.entry-bounty { border-left-color: #ba2f1d; }
+  .log-entry.entry-hunt { border-left-color: #5b7348; }
+  .log-entry.entry-mine { border-left-color: #c98e4d; }
+  .log-entry.entry-ranch { border-left-color: #8c5b36; }
+  .log-entry strong { color: #fff; }
+  .log-entry em { color: #f0a67e; font-style: normal; }
+
+  /* --- INTERACTIVE VIEWPORT --- */
+  #viewport-content {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 15px;
+    padding-bottom: 85px; /* Dock clearance */
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-accent) #0a0503;
+  }
+
+  .panel-card {
+    background: var(--bg-panel);
+    border: 1px solid var(--border-dark);
+    padding: 14px;
+    box-shadow: 2px 3px 8px rgba(0,0,0,0.6);
+  }
+  .panel-title-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid var(--border-accent);
+    padding-bottom: 6px;
+    margin-bottom: 12px;
+  }
+  .panel-title {
+    font-size: 15px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: #fff;
+    text-shadow: 1px 1px 0 #000;
+  }
+  .panel-tag {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+  }
+
+  /* Grid of actionable items */
+  .action-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  @media(min-width: 640px) {
+    .action-grid.two-col {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  /* Reusable Action Button */
+  .act-btn {
+    background: var(--bg-card);
+    border: 1px solid var(--border-dark);
+    padding: 11px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    color: var(--text-primary);
+  }
+  .act-btn:hover:not(:disabled) {
+    background: var(--bg-card-hover);
+    border-color: var(--border-highlight);
+    transform: translateY(-1px);
+    box-shadow: 0 3px 6px rgba(0,0,0,0.5);
+  }
+  .act-btn:active:not(:disabled) {
+    transform: translateY(1px);
+    background: #140b06;
+  }
+  .act-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    border-color: #22120a;
+  }
+  .act-btn-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 900;
+    font-size: 13px;
+    color: #fff;
+  }
+  .act-btn-desc {
+    font-size: 11px;
+    color: var(--text-muted);
+    line-height: 1.35;
+  }
+  .act-cost {
+    font-size: 11px;
+    color: #df8a68;
+    font-weight: bold;
+  }
+
+  /* Bounty Posters */
+  .bounty-card {
+    background: #1d120a;
+    border: 2px solid #4a2713;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    position: relative;
+    box-shadow: 2px 2px 6px rgba(0,0,0,0.7);
+  }
+  .bounty-tier-badge {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    font-size: 10px;
+    padding: 2px 6px;
+    font-weight: 900;
+    text-transform: uppercase;
+    border: 1px solid var(--border-accent);
+    background: var(--dock-bg);
+  }
+  .tier-petty { color: #8bb174; }
+  .tier-hardened { color: #e09849; }
+  .tier-deadly { color: #df4430; border-color: #df4430; }
+
+  .bounty-name {
+    font-size: 16px;
+    font-weight: 900;
+    color: #fff;
+    letter-spacing: 1px;
+  }
+  .bounty-crime {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-style: italic;
+  }
+  .bounty-details {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    font-size: 11px;
+    gap: 4px;
+    background: #140b06;
+    padding: 6px;
+    border: 1px solid #2d180f;
+  }
+  .bounty-details div span {
+    color: #fff;
+    font-weight: bold;
+  }
+  .hunt-btn {
+    background: var(--accent-red);
+    border: 1px solid #b7321c;
+    color: #fff;
+    padding: 8px;
+    text-align: center;
+    font-weight: 900;
+    font-size: 12px;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-top: 4px;
+    transition: background 0.15s;
+  }
+  .hunt-btn:hover {
+    background: var(--accent-red-hover);
+  }
+
+  /* --- BOTTOM NAVIGATION DOCK (iOS FRIENDLY) --- */
+  #ios-dock {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 64px;
+    background: var(--dock-bg);
+    border-top: 2px solid var(--border-dark);
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    z-index: 10;
+  }
+  .dock-tab {
+    flex: 1;
+    height: 100%;
+    background: none;
+    border: none;
+    border-right: 1px solid var(--border-dark);
+    font-size: 12px;
+    font-weight: 900;
+    text-transform: uppercase;
+    cursor: pointer;
+    color: var(--text-muted);
+    letter-spacing: 1px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 3px;
+    transition: all 0.2s;
+  }
+  .dock-tab:last-child {
+    border-right: none;
+  }
+  .dock-tab.active {
+    background: #1c1009;
+    color: #fff;
+    border-top: 3px solid var(--accent-gold);
+  }
+  .dock-tab .dock-icon {
+    font-size: 15px;
+  }
+
+  /* --- MODAL WINDOWS (MANUAL, GOD MODE, LOOT) --- */
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 99;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 15px;
+  }
+  .modal-window {
+    background: var(--bg-panel);
+    border: 2px solid var(--border-accent);
+    box-shadow: 0 0 35px rgba(0,0,0,0.9);
+    width: 100%;
+    max-width: 650px;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .modal-header {
+    background: var(--dock-bg);
+    border-bottom: 2px solid var(--border-dark);
+    padding: 12px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .modal-title {
+    font-size: 16px;
+    font-weight: 900;
+    color: #fff;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+  .modal-close {
+    background: none;
+    border: 1px solid var(--border-dark);
+    color: var(--text-muted);
+    padding: 4px 10px;
+    cursor: pointer;
+    font-weight: bold;
+  }
+  .modal-close:hover {
+    color: #fff;
+    border-color: #fff;
+  }
+  .modal-body {
+    padding: 16px;
+    overflow-y: auto;
+    font-size: 13px;
+    line-height: 1.5;
+    color: #cfbcab;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .modal-body h4 {
+    color: #fff;
+    border-bottom: 1px solid var(--border-dark);
+    padding-bottom: 4px;
+    margin-top: 6px;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  /* --- CANVAS REFLEX DUELING SCREEN --- */
+  #duel-layer {
+    position: fixed;
+    inset: 0;
+    background: #000;
+    z-index: 200;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  #duel-container {
+    position: relative;
+    width: 900px;
+    max-width: 100vw;
+    height: 560px;
+    max-height: 100vh;
+    border: 4px solid #542b15;
+    background: #000;
+    box-shadow: 0 0 40px rgba(0,0,0,0.95), inset 0 0 50px rgba(0,0,0,0.8);
+  }
+  canvas#stage {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+  .duel-hud {
+    position: absolute;
+    top: 15px;
+    left: 20px;
+    right: 20px;
+    display: flex;
+    justify-content: space-between;
+    pointer-events: none;
+    font-size: 16px;
+    font-weight: 900;
+    color: #f7d2a3;
+    text-shadow: 2px 2px 4px #000;
+    letter-spacing: 1px;
+  }
+  .duel-banner {
+    position: absolute;
+    top: 36%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    pointer-events: none;
+    width: 90%;
+  }
+  .banner-call {
+    font-size: 54px;
+    font-weight: 900;
+    letter-spacing: 5px;
+    text-transform: uppercase;
+    color: #fff;
+    text-shadow: 0 0 20px rgba(200, 40, 0, 0.95), 3px 3px 0 #000;
+  }
+  .banner-sub {
+    font-size: 19px;
+    margin-top: 8px;
+    color: #ecd8be;
+    text-shadow: 2px 2px 4px #000;
+  }
+</style>
+</head>
+<body>
+
+<!-- SIMULATOR INTERFACE -->
+<div id="sim-layer">
+
+  <!-- TOP LEDGER -->
+  <div id="ledger-container">
+    <div class="ledger-row">
+      <div class="stat-cell">YEAR: <span id="stat-year">1</span></div>
+      <div class="stat-cell">DAY: <span id="stat-day">1</span></div>
+      <div class="stat-cell ap-cell">AP: <span id="stat-ap">5</span>/<span id="stat-max-ap">5</span></div>
+      <div class="stat-cell hp-cell">HP: <span id="stat-hp">100</span>/100</div>
+    </div>
+    <div class="ledger-row">
+      <div class="stat-cell">SILVER: $<span id="stat-silver">30</span></div>
+      <div class="stat-cell">GOLD: <span id="stat-gold">0</span> oz</div>
+      <div class="stat-cell">PROV: <span id="stat-food">6</span></div>
+      <div class="stat-cell">WATER: <span id="stat-water">6</span></div>
+    </div>
+    <div class="ledger-row">
+      <div class="stat-cell">TIMBER: <span id="stat-wood">0</span></div>
+      <div class="stat-cell">SHOT/POW: <span id="stat-powder">8</span></div>
+      <div class="stat-cell">FURS: <span id="stat-furs">0</span></div>
+      <div class="stat-cell">TRINKETS: <span id="stat-trinkets">0</span></div>
+    </div>
+    <div class="ledger-quickbar">
+      <div class="quickbar-left">
+        <button class="quick-btn" onclick="openManual()">📖 MANUAL</button>
+        <button class="quick-btn" onclick="openGodMode()">⚡ GOD CONSOLE</button>
+      </div>
+      <div>
+        <button class="quick-btn sleep-btn" onclick="sleepDay()">🌙 SLEEP & REST (RESTORE AP)</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHRONICLE / EVENT LOG -->
+  <div id="chronicle-wrapper">
+    <div class="chronicle-header">
+      <span>DEADWOOD CHRONICLE & DESPATCH</span>
+      <span id="chronicle-status">RANCH STATUS: BEDROLL CAMP</span>
+    </div>
+    <div id="event-log"></div>
+  </div>
+
+  <!-- MAIN SCROLLABLE ACTION VIEWPORT -->
+  <div id="viewport-content">
+    <!-- Rendered via JS based on active dock tab -->
+  </div>
+
+  <!-- BOTTOM DOCK NAVIGATION -->
+  <div id="ios-dock">
+    <button class="dock-tab active" onclick="switchTab('homestead')">
+      <span class="dock-icon">🛖</span>
+      <span>RANCH</span>
+    </button>
+    <button class="dock-tab" onclick="switchTab('wilds')">
+      <span class="dock-icon">🌲</span>
+      <span>WILDS</span>
+    </button>
+    <button class="dock-tab" onclick="switchTab('prospect')">
+      <span class="dock-icon">⛏️</span>
+      <span>MINES</span>
+    </button>
+    <button class="dock-tab" onclick="switchTab('town')">
+      <span class="dock-icon">⚖️</span>
+      <span>DEADWOOD</span>
+    </button>
+    <button class="dock-tab" onclick="switchTab('bounties')">
+      <span class="dock-icon">📜</span>
+      <span>BOUNTIES</span>
+    </button>
+  </div>
+
+</div>
+
+<!-- OPERATIONS MANUAL MODAL -->
+<div class="modal-backdrop" id="manual-modal">
+  <div class="modal-window">
+    <div class="modal-header">
+      <div class="modal-title">DEADWOOD SURVIVAL MANUAL</div>
+      <button class="modal-close" onclick="closeManual()">CLOSE ✕</button>
+    </div>
+    <div class="modal-body">
+      <h4>Action Points & Logistics</h4>
+      <p>Each day starts with <strong>5 Base Action Points (AP)</strong> (or 7 once you construct the Frontier Stables). Every wilderness hunt, mine expedition, and timber felling costs 1 AP.</p>
+      <p>Clicking <strong>SLEEP & REST</strong> advances to the next dawn. Sleeping consumes <strong>1 Provision</strong> and <strong>1 Fresh Water</strong>. If you run out of either, you will suffer severe HP dehydration or starvation penalties! (Building a Fresh Water Well permanently solves thirst).</p>
+
+      <h4>Quick-Draw Combat Mechanics</h4>
+      <p>When you accept a bounty contract, you step directly into the dust at high noon. A heavy tension bell chimes, accompanied by your pounding heartbeat.</p>
+      <p>Wait for the bell stinger and the red <strong>DRAW!</strong> signal. If you click or tap spacebar <em>before</em> the signal, you commit a <strong>FOUL DRAW</strong> (instant misfire, usually resulting in you being gunned down).</p>
+      <p>Reaction calculation: <code>Effective Time = Raw Milliseconds - Weapon Draw Bonus - Ranch Workbench Bonus</code>. If your reaction is faster than the outlaw's roll, your shot connects cleanly.</p>
+
+      <h4>Homestead & Outbuildings</h4>
+      <p>Your ranch progresses through 5 tiers from a humble firepit to a sprawling cattle estate. Outbuildings grant permanent logistical buffs: Stone Smokehouse stops meat spoilage, Skinning Shed grants +25% fur sell prices, Gunsmith Bench adds +15ms quickdraw speed, and the Defense Stockade fends off night raids.</p>
+
+      <h4>Hunting & Mining Logistics</h4>
+      <p>Hunting with a <strong>Firearm</strong> requires shot and powder; it has higher odds of taking down big game (elk, bear, buck). Hunting with a <strong>Longbow</strong> is free and silent, yielding cleaner pelts and preserving ammunition, but requires higher tracking finesse.</p>
+      <p>Prospecting ranges from panning the muddy Rapid Creek silt, to setting up a sluice box, to digging dangerous underground drift shafts with your pickaxe.</p>
+    </div>
+  </div>
+</div>
+
+<!-- GOD MODE / DEVELOPER CONSOLE MODAL -->
+<div class="modal-backdrop" id="god-modal">
+  <div class="modal-window">
+    <div class="modal-header">
+      <div class="modal-title">FRONTIER GOD CONSOLE</div>
+      <button class="modal-close" onclick="closeGodMode()">CLOSE ✕</button>
+    </div>
+    <div class="modal-body">
+      <p>Test sandbox features, simulate combat, and inspect high-tier mechanics without grinding:</p>
+      <div class="action-grid two-col">
+        <button class="act-btn" onclick="cheatAddFunds()">
+          <div class="act-btn-top">STRIKE COMSTOCK LODE</div>
+          <div class="act-btn-desc">+$1,000 Silver Dollars & +50 oz Pure Gold</div>
+        </button>
+        <button class="act-btn" onclick="cheatFullVigor()">
+          <div class="act-btn-top">FULL VIGOR RESTORE</div>
+          <div class="act-btn-desc">Restore HP to 100 & Refill Max AP</div>
+        </button>
+        <button class="act-btn" onclick="cheatStockpile()">
+          <div class="act-btn-top">SUPPLY TRAIN ARRIVAL</div>
+          <div class="act-btn-desc">+500 Timber, +100 Provisions, +100 Water, +50 Powder</div>
+        </button>
+        <button class="act-btn" onclick="cheatMaxHomestead()">
+          <div class="act-btn-top">INSTANT GRAND RANCH</div>
+          <div class="act-btn-desc">Tier 5 Estate + All 6 Outbuildings unlocked</div>
+        </button>
+        <button class="act-btn" onclick="cheatUnlockGuns()">
+          <div class="act-btn-top">GUNSMITH'S MASTER VAULT</div>
+          <div class="act-btn-desc">Unlock all historic pistols and revolvers</div>
+        </button>
+        <button class="act-btn" onclick="cheatToggleGodDraw()">
+          <div class="act-btn-top">GOD DRAW TOGGLE</div>
+          <div class="act-btn-desc" id="god-draw-status">Status: 1ms Reflexes INACTIVE</div>
+        </button>
+        <button class="act-btn" onclick="cheatRerollBounties()">
+          <div class="act-btn-top">REROLL BOUNTY BOARD</div>
+          <div class="act-btn-desc">Generate 5 fresh outlaws immediately</div>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CANVAS REFLEX DUELING OVERLAY -->
+<div id="duel-layer">
+  <div id="duel-container">
+    <canvas id="stage" width="900" height="560"></canvas>
+    <div class="duel-hud">
+      <div id="player-gun-hud">COLT .45</div>
+      <div id="bounty-name-hud">OUTLAW</div>
+    </div>
+    <div class="duel-banner">
+      <div class="banner-call" id="banner-main"></div>
+      <div class="banner-sub" id="banner-sub"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =========================================================
+   SYNTHESIZED AUDIO ENGINE (Web Audio API)
+   ========================================================= */
+class SoundEngine {
+  constructor() {
+    this.ctx = null;
+  }
+  init() {
+    if (!this.ctx) {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      this.ctx = new AudioCtx();
+    }
+    if (this.ctx && this.ctx.state === 'suspended') {
+      this.ctx.resume();
+    }
+  }
+
+  // Gunshot sound: filtered white noise blast + sub-oscillator punch
+  playGunshot() {
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+    
+    const bufferSize = this.ctx.sampleRate * 0.45;
+    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+    const output = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      output[i] = (Math.random() * 2 - 1) * Math.exp(-i / (this.ctx.sampleRate * 0.04));
+    }
+    const whiteNoise = this.ctx.createBufferSource();
+    whiteNoise.buffer = buffer;
+
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(1400, now);
+    filter.frequency.exponentialRampToValueAtTime(80, now + 0.38);
+
+    const gain = this.ctx.createGain();
+    gain.gain.setValueAtTime(1.9, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+
+    whiteNoise.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.ctx.destination);
+    whiteNoise.start(now);
+
+    const osc = this.ctx.createOscillator();
+    const oscGain = this.ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(150, now);
+    osc.frequency.exponentialRampToValueAtTime(20, now + 0.32);
+    oscGain.gain.setValueAtTime(1.3, now);
+    oscGain.gain.exponentialRampToValueAtTime(0.01, now + 0.32);
+    osc.connect(oscGain);
+    oscGain.connect(this.ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.35);
+  }
+
+  // Deep Tension Church Bell Gong
+  playTensionBell() {
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(280, now);
+    osc.frequency.exponentialRampToValueAtTime(275, now + 2.2);
+
+    gain.gain.setValueAtTime(0.75, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 2.4);
+
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start(now);
+    osc.stop(now + 2.4);
+  }
+
+  // Draw Bell Stinger (Sharp & clear combat cue)
+  playDrawSignal() {
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+    [540, 1080].forEach((freq) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(freq, now);
+      gain.gain.setValueAtTime(0.35, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.55);
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.55);
+    });
+  }
+
+  // Heartbeat pulse
+  playHeartbeat() {
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(65, now);
+    osc.frequency.exponentialRampToValueAtTime(32, now + 0.13);
+    gain.gain.setValueAtTime(0.7, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.16);
+  }
+
+  // Ricochet ping
+  playRicochet() {
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(1900, now);
+    osc.frequency.exponentialRampToValueAtTime(300, now + 0.28);
+    gain.gain.setValueAtTime(0.3, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.28);
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.3);
+  }
+}
+
+const audio = new SoundEngine();
+
+/* =========================================================
+   HISTORICAL FIREARMS ARMORY
+   ========================================================= */
+const ARMORY_CATALOG = [
+  {
+    id: 'derringer',
+    name: 'Derringer .41 Rimfire (2" Bbl)',
+    cost: 45,
+    drawBonus: 40,   // Extremely fast draw from vest pocket
+    lethal: 0.75,     // Lower stopping power
+    desc: 'Vest pocket holdout gun. Blistering fast draw, but lacks long punch.'
+  },
+  {
+    id: 'colt_navy',
+    name: '1851 Colt Navy .36 (7.5" Bbl)',
+    cost: 135,
+    drawBonus: 15,   // Balanced
+    lethal: 1.25,
+    desc: 'The favorite of Wild Bill Hickok. Perfectly balanced octagonal barrel.'
+  },
+  {
+    id: 'colt_army',
+    name: '1860 Colt Army .44 (8" Bbl)',
+    cost: 195,
+    drawBonus: 5,
+    lethal: 1.6,
+    desc: 'Hard-hitting Civil War veteran sidearm. Streamlined cylinder.'
+  },
+  {
+    id: 'peacemaker',
+    name: 'Colt SAA Peacemaker .45 (4.75" Bbl)',
+    cost: 280,
+    drawBonus: 30,   // Quickdraw barrel model
+    lethal: 1.9,
+    desc: 'The gun that won the West. Fast out of leather with devastating force.'
+  },
+  {
+    id: 'dragoon',
+    name: 'Colt Dragoon .44 (7.5" Bbl)',
+    cost: 360,
+    drawBonus: -15,  // Heavy cavalry monster, slow draw
+    lethal: 2.7,     // Annihilating stopping power
+    desc: 'Over four pounds of brass and iron. Slow to point, but blows through bone.'
+  }
+];
+
+/* =========================================================
+   HOMESTEAD TIERS & OUTBUILDINGS
+   ========================================================= */
+const HOMESTEAD_TIERS = [
+  { name: "Bedroll & Firepit Camp", woodCost: 0, silverCost: 0 },
+  { name: "Timber Lean-To", woodCost: 40, silverCost: 60 },
+  { name: "Hemlock Log Cabin", woodCost: 140, silverCost: 220 },
+  { name: "Fortified Homestead", woodCost: 380, silverCost: 750 },
+  { name: "Deadwood Cattle & Horse Ranch", woodCost: 1200, silverCost: 2200 }
+];
+
+const OUTBUILDING_DATA = [
+  {
+    id: 'smokehouse',
+    name: 'Stone Smokehouse',
+    wood: 60, silver: 80,
+    desc: 'Preserves game. Doubles food yield from meat harvests and halts spoilage.'
+  },
+  {
+    id: 'well',
+    name: 'Fresh Water Well',
+    wood: 80, silver: 120,
+    desc: 'Taps an artesian spring. Grants infinite clean water, ending dehydration.'
+  },
+  {
+    id: 'gunbench',
+    name: 'Gunsmith Workbench',
+    wood: 110, silver: 180,
+    desc: 'Fine-tunes pistol sears and balances holsters. +15ms quickdraw bonus.'
+  },
+  {
+    id: 'skinningshed',
+    name: 'Trapper\'s Skinning Shed',
+    wood: 90, silver: 110,
+    desc: 'Clean stretching racks. Increases all harvested fur sales by +25%.'
+  },
+  {
+    id: 'stables',
+    name: 'Frontier Stables',
+    wood: 250, silver: 450,
+    desc: 'House saddle mounts. Increases your permanent daily Action Points from 5 to 7.'
+  },
+  {
+    id: 'stockade',
+    name: 'Stockade Defense Wall',
+    wood: 200, silver: 300,
+    desc: 'Heavy pine palisade. Prevents random nocturnal bandit raids and rustling.'
+  }
+];
+
+/* =========================================================
+   PROCEDURAL OUTLAW GENERATION (5-BOUNTY BOARD)
+   ========================================================= */
+const FIRST_NAMES = [
+  "Dusty", "Calamity", "Shaky", "Black-Eyed", "Silver-Dollar", "Iron-Jaw",
+  "Bloody", "Whiskey", "Deacon", "Rattlesnake", "One-Eyed", "Wildcat", "Pale"
+];
+const SURNAMES = [
+  "Pete", "Jake", "Sadie", "Bart", "McCoy", "Slade", "Brimstone", "Holliday",
+  "Cassidy", "Redwood", "Vance", "Colt", "Sinclair", "Galloway", "Thornton"
+];
+const CRIMES_PETTY = [
+  "Horse Rustling at Sunup Creek",
+  "Stealing Gold Dust from an Old Miner",
+  "Stagecoach Mailbag Robbery",
+  "Card Cheating & Shootout at Saloon"
+];
+const CRIMES_HARDENED = [
+  "Deadwood Express Train Derailment & Robbery",
+  "Armed Daylight Robbery of Wells Fargo",
+  "Assassination of a Territorial Marshal",
+  "Dynamiting the Black Hills Bank Vault"
+];
+const CRIMES_DEADLY = [
+  "Massacre at Red Cloud Pass",
+  "Cold-Blooded Slaying of Three Deputies",
+  "The Notorious Deadwood Syndicate Enforcer",
+  "Infamous Syndicate Hitman & Butcher"
+];
+const TRINKET_NAMES = [
+  "Engraved Sterling Silver Flask",
+  "Ivory Gambling Card Case",
+  "Gold-Capped Molartooth",
+  "Mother-of-Pearl Pocket Watch",
+  "Carved Turquoise Belt Buckle",
+  "Jeweled Colt Grip Medallion"
+];
+
+/* =========================================================
+   GAME STATE
+   ========================================================= */
+const state = {
+  day: 1,
+  year: 1,
+  hp: 100,
+  maxHp: 100,
+  ap: 5,
+  maxAp: 5,
+  silver: 30,
+  gold: 0,
+  food: 6,
+  water: 6,
+  wood: 0,
+  powder: 8,
+  furs: 0,
+  trinkets: 0,
+  lithicArtifacts: 0,
+  bountiesDefeated: 0,
+
+  homesteadTier: 0, // 0 to 4
+  outbuildings: {
+    smokehouse: false,
+    well: false,
+    gunbench: false,
+    skinningshed: false,
+    stables: false,
+    stockade: false
+  },
+
+  equippedGun: ARMORY_CATALOG[1], // Start with 1851 Colt Navy
+  gunsOwned: ['colt_navy'],
+
+  // Active Trap Line
+  activeTrapsSet: 0,
+
+  // God Mode Status
+  godDrawEnabled: false,
+
+  // Active Bounties on the Board
+  dailyBounties: [],
+
+  // Tab
+  currentTab: 'homestead'
+};
+
+/* =========================================================
+   LOGGING & HUD UPDATING
+   ========================================================= */
+const eventLog = document.getElementById('event-log');
+
+function logDespatch(msg, category = 'general') {
+  const div = document.createElement('div');
+  div.className = `log-entry entry-${category}`;
+  div.innerHTML = `<span class="timestamp">[Y${state.year}:D${state.day}]</span> ${msg}`;
+  eventLog.prepend(div);
+}
+
+function updateHUD() {
+  document.getElementById('stat-year').textContent = state.year;
+  document.getElementById('stat-day').textContent = state.day;
+  document.getElementById('stat-ap').textContent = state.ap;
+  document.getElementById('stat-max-ap').textContent = state.maxAp;
+  document.getElementById('stat-hp').textContent = state.hp;
+  document.getElementById('stat-silver').textContent = state.silver;
+  document.getElementById('stat-gold').textContent = state.gold;
+  document.getElementById('stat-food').textContent = state.food;
+  document.getElementById('stat-water').textContent = state.outbuildings.well ? "∞" : state.water;
+  document.getElementById('stat-wood').textContent = state.wood;
+  document.getElementById('stat-powder').textContent = state.powder;
+  document.getElementById('stat-furs').textContent = state.furs;
+  document.getElementById('stat-trinkets').textContent = state.trinkets;
+
+  const ranchLabel = HOMESTEAD_TIERS[state.homesteadTier].name.toUpperCase();
+  document.getElementById('chronicle-status').textContent = `RANCH STATUS: ${ranchLabel}`;
+
+  if (state.hp <= 0) {
+    handlePermadeath();
+  }
+}
+
+function handlePermadeath() {
+  logDespatch("<strong>YOU HAVE FALLEN.</strong> Your body lies cold in the Deadwood dirt.", 'bounty');
+  showCustomModal("BOOT HILL CEMETERY", `
+    <h3 style="color:#df4430; margin-bottom:10px;">YOUR TRAIL HAS ENDED</h3>
+    <p>You survived until Year ${state.year}, Day ${state.day}.</p>
+    <p>Bounties Collected: ${state.bountiesDefeated}</p>
+    <p>Silver Stashed: $${state.silver} | Gold: ${state.gold} oz</p>
+    <br>
+    <button class="hunt-btn" onclick="window.location.reload()">Begin a New Legacy</button>
+  `);
+}
+
+/* =========================================================
+   BOUNTY BOARD GENERATOR (5 DAILY BOUNTIES)
+   ========================================================= */
+function generateDailyBounties() {
+  const list = [];
+
+  // 2 Petty Outlaws
+  for (let i = 0; i < 2; i++) {
+    const name = `${pickRandom(FIRST_NAMES)} ${pickRandom(SURNAMES)}`;
+    list.push({
+      id: `bounty_${state.day}_${i}`,
+      name: name,
+      tier: 'petty',
+      tierName: 'Drifter / Rustler',
+      crime: pickRandom(CRIMES_PETTY),
+      firearm: 'Rusted .31 Caplock Pocket Revolver',
+      reaction: 430 + Math.floor(Math.random() * 50),
+      variance: 60,
+      reward: 35 + Math.floor(Math.random() * 45),
+      alive: true
+    });
+  }
+
+  // 2 Hardened Outlaws
+  for (let i = 2; i < 4; i++) {
+    const name = `${pickRandom(FIRST_NAMES)} ${pickRandom(SURNAMES)}`;
+    list.push({
+      id: `bounty_${state.day}_${i}`,
+      name: name,
+      tier: 'hardened',
+      tierName: 'Notorious Raider',
+      crime: pickRandom(CRIMES_HARDENED),
+      firearm: 'Twin 1860 Colt Armies',
+      reaction: 310 + Math.floor(Math.random() * 40),
+      variance: 35,
+      reward: 180 + Math.floor(Math.random() * 160),
+      alive: true
+    });
+  }
+
+  // 1 Deadly Legendary Fugitive
+  const bossName = `${pickRandom(FIRST_NAMES)} ${pickRandom(SURNAMES)}`;
+  list.push({
+    id: `bounty_${state.day}_4`,
+    name: bossName,
+    tier: 'deadly',
+    tierName: 'Dead-Eye Killer',
+    crime: pickRandom(CRIMES_DEADLY),
+    firearm: 'Custom Tuned Peacemaker .45',
+    reaction: 215 + Math.floor(Math.random() * 25),
+    variance: 15,
+    reward: 650 + Math.floor(Math.random() * 450),
+    alive: true
+  });
+
+  state.dailyBounties = list;
+}
+
+function pickRandom(arr) {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+/* =========================================================
+   DAY ADVANCEMENT & NIGHT RAIDS
+   ========================================================= */
+function sleepDay() {
+  audio.init();
+  state.day++;
+  if (state.day > 365) {
+    state.year++;
+    state.day = 1;
+    logDespatch("<strong>A NEW YEAR DAWNS</strong> over the Black Hills territories.", 'general');
+  }
+
+  // Reset AP
+  state.maxAp = state.outbuildings.stables ? 7 : 5;
+  state.ap = state.maxAp;
+
+  // Logistics: Food consumption
+  if (state.food > 0) {
+    state.food--;
+    if (state.hp < state.maxHp) {
+      const heal = 6 + (state.homesteadTier * 3);
+      state.hp = Math.min(state.maxHp, state.hp + heal);
+    }
+  } else {
+    state.hp -= 15;
+    logDespatch("<strong>STARVATION:</strong> You had no provisions to eat. HP deteriorated by 15.", 'general');
+  }
+
+  // Logistics: Water consumption
+  if (!state.outbuildings.well) {
+    if (state.water > 0) {
+      state.water--;
+    } else {
+      state.hp -= 20;
+      logDespatch("<strong>DEHYDRATION:</strong> Your canteen was bone dry. HP lost by 20.", 'general');
+    }
+  }
+
+  // Trap lines resolution
+  if (state.activeTrapsSet > 0) {
+    let peltsTrapped = 0;
+    for (let t = 0; t < state.activeTrapsSet; t++) {
+      if (Math.random() > 0.4) peltsTrapped++;
+    }
+    if (peltsTrapped > 0) {
+      state.furs += peltsTrapped;
+      logDespatch(`Your mountain trap lines yielded <em>${peltsTrapped} prime pelts</em> overnight.`, 'hunt');
+    }
+  }
+
+  // Spoilage check (if no smokehouse)
+  if (!state.outbuildings.smokehouse && state.food > 12) {
+    const spoiled = Math.floor(state.food * 0.25);
+    state.food -= spoiled;
+    logDespatch(`Midsummer heat spoiled ${spoiled} uncured rations in your larder. Build a Smokehouse to preserve food.`, 'general');
+  }
+
+  // Random Night Rustler Raid
+  if (!state.outbuildings.stockade && Math.random() < 0.12 && state.silver > 50) {
+    const stolen = Math.floor(state.silver * 0.2);
+    state.silver -= stolen;
+    logDespatch(`<strong>BANDIT RAID!</strong> Night raiders swept your camp and looted $${stolen} silver. Construct a Stockade Wall for security.`, 'ranch');
+  }
+
+  // Refresh Bounty Board every dawn
+  generateDailyBounties();
+
+  logDespatch(`Dawn broke. Morning fog clings to Deadwood Gulch. Action points restored to ${state.ap}.`, 'general');
+  updateHUD();
+  renderCurrentTab();
+}
+
+/* =========================================================
+   TAB SWITCHING & VIEWPORT RENDERING
+   ========================================================= */
+function switchTab(tabName) {
+  state.currentTab = tabName;
+  document.querySelectorAll('.dock-tab').forEach(b => b.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+  renderCurrentTab();
+}
+
+function renderCurrentTab() {
+  const vp = document.getElementById('viewport-content');
+  vp.innerHTML = '';
+
+  if (state.currentTab === 'homestead') renderHomesteadView(vp);
+  else if (state.currentTab === 'wilds') renderWildsView(vp);
+  else if (state.currentTab === 'prospect') renderProspectView(vp);
+  else if (state.currentTab === 'town') renderTownView(vp);
+  else if (state.currentTab === 'bounties') renderBountiesView(vp);
+}
+
+/* 1. HOMESTEAD VIEW */
+function renderHomesteadView(vp) {
+  const currentTier = HOMESTEAD_TIERS[state.homesteadTier];
+  const nextTier = HOMESTEAD_TIERS[state.homesteadTier + 1];
+
+  let nextTierHTML = "";
+  if (nextTier) {
+    const canAfford = state.wood >= nextTier.woodCost && state.silver >= nextTier.silverCost;
+    nextTierHTML = `
+      <div class="panel-card">
+        <div class="panel-title-bar">
+          <div class="panel-title">EXPAND HOMESTEAD: ${nextTier.name.toUpperCase()}</div>
+          <div class="panel-tag">TIER ${state.homesteadTier + 2}</div>
+        </div>
+        <p style="font-size:12px; color:var(--text-muted); margin-bottom:10px;">
+          Reinforce your foundation with milled timber and iron fixtures. Improves daily natural healing and grants higher frontier endurance.
+        </p>
+        <button class="act-btn" ${!canAfford ? 'disabled' : ''} onclick="upgradeHomestead()">
+          <div class="act-btn-top">COMMISSION EXPANSION</div>
+          <div class="act-btn-desc">Requires: ${nextTier.woodCost} Timber & $${nextTier.silverCost} Silver</div>
+        </button>
+      </div>
+    `;
+  }
+
+  // Outbuildings
+  let outbuildingCards = OUTBUILDING_DATA.map(ob => {
+    const owned = state.outbuildings[ob.id];
+    const canBuy = state.wood >= ob.wood && state.silver >= ob.silver;
+    return `
+      <button class="act-btn" ${owned || !canBuy ? 'disabled' : ''} onclick="buildOutbuilding('${ob.id}')">
+        <div class="act-btn-top">
+          <span>${ob.name}</span>
+          <span>${owned ? 'BUILT ✓' : `$${ob.silver} + ${ob.wood} Wood`}</span>
+        </div>
+        <div class="act-btn-desc">${ob.desc}</div>
+      </button>
+    `;
+  }).join('');
+
+  vp.innerHTML = `
+    <div class="panel-card">
+      <div class="panel-title-bar">
+        <div class="panel-title">${currentTier.name.toUpperCase()}</div>
+        <div class="panel-tag">CURRENT HOMESTEAD</div>
+      </div>
+      <p style="font-size:12px; margin-bottom:12px; color:var(--text-muted);">
+        Equipped Firearm: <strong>${state.equippedGun.name}</strong> 
+        ${state.outbuildings.gunbench ? '<span style="color:#e09849;">(+15ms Workbench Tune)</span>' : ''}
+      </p>
+      <div class="action-grid two-col">
+        <button class="act-btn" onclick="actionChopWood()" ${state.ap < 1 ? 'disabled' : ''}>
+          <div class="act-btn-top">
+            <span>AXE TIMBER RUN</span>
+            <span class="act-cost">1 AP</span>
+          </div>
+          <div class="act-btn-desc">Fell Black Hills white pines for cured building lumber. Yields 6-12 Wood.</div>
+        </button>
+
+        <button class="act-btn" onclick="actionRestHeal()" ${state.ap < 1 || state.food < 1 ? 'disabled' : ''}>
+          <div class="act-btn-top">
+            <span>TEND WOUNDS & REST</span>
+            <span class="act-cost">1 AP + 1 Food</span>
+          </div>
+          <div class="act-btn-desc">Bandage gun scrapes and boil herbs. Restores 25 Hit Points.</div>
+        </button>
+      </div>
+    </div>
+
+    ${nextTierHTML}
+
+    <div class="panel-card">
+      <div class="panel-title-bar">
+        <div class="panel-title">RANCH OUTBUILDINGS & INFRASTRUCTURE</div>
+        <div class="panel-tag">PERMANENT LOGISTICS</div>
+      </div>
+      <div class="action-grid two-col">
+        ${outbuildingCards}
+      </div>
+    </div>
+  `;
+}
+
+/* 2. THE WILDS VIEW */
+function renderWildsView(vp) {
+  vp.innerHTML = `
+    <div class="panel-card">
+      <div class="panel-title-bar">
+        <div class="panel-title">HUNTING GROUNDS & BIG GAME</div>
+        <div class="panel-tag">BLACK HILLS VALLEYS</div>
+      </div>
+      <div class="action-grid two-col">
+        <button class="act-btn" onclick="actionHuntFirearm()" ${state.ap < 1 || state.powder < 1 ? 'disabled' : ''}>
+          <div class="act-btn-top">
+            <span>HUNT WITH FIREARM</span>
+            <span class="act-cost">1 AP + 1 Shot/Powder</span>
+          </div>
+          <div class="act-btn-desc">High stopping power against Elk, Grizzly, and Bighorn. Gunshot noise scares other valley game.</div>
+        </button>
+
+        <button class="act-btn" onclick="actionHuntBow()" ${state.ap < 1 ? 'disabled' : ''}>
+          <div class="act-btn-top">
+            <span>HUNT WITH LONGBOW</span>
+            <span class="act-cost">1 AP (Free Ammo)</span>
+          </div>
+          <div class="act-btn-desc">Silent traditional bow. Yields undamaged prime pelts and chance to uncover prehistoric flint arrowheads.</div>
+        </button>
+      </div>
+    </div>
+
+    <div class="panel-card">
+      <div class="panel-title-bar">
+        <div class="panel-title">MOUNTAIN TRAP LINES & RAPID CREEK</div>
+        <div class="panel-tag">FUR HARVEST & PROVISIONS</div>
+      </div>
+      <div class="action-grid two-col">
+        <button class="act-btn" onclick="actionSetTrapLine()" ${state.ap < 1 || state.wood < 5 ? 'disabled' : ''}>
+          <div class="act-btn-top">
+            <span>SET DEADFALL TRAP LINE</span>
+            <span class="act-cost">1 AP + 5 Wood</span>
+          </div>
+          <div class="act-btn-desc">Rig pine log deadfalls along Beaver and Red Fox runs. Automatically traps pelts every night. (Current: ${state.activeTrapsSet} lines).</div>
+        </button>
+
+        <button class="act-btn" onclick="actionFish()" ${state.ap < 1 ? 'disabled' : ''}>
+          <div class="act-btn-top">
+            <span>FISH RAPID CREEK</span>
+            <span class="act-cost">1 AP</span>
+          </div>
+          <div class="act-btn-desc">Cast horsehair lines for Cutthroat Trout and Sturgeon. Fresh food with zero ammo risk.</div>
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+/* 3. PROSPECTING VIEW */
+function renderProspectView(vp) {
+  vp.innerHTML = `
+    <div class="panel-card">
+      <div class="panel-title-bar">
+        <div class="panel-title">GOLD PANNING & SLUICE WORK</div>
+        <div class="panel-tag">RAPID CREEK GRAVELS</div>
+      </div>
+      <div class="action-grid two-col">
+        <button class="act-btn" onclick="actionPanRiver()" ${state.ap < 1 ? 'disabled' : ''}>
+          <div class="act-btn-top">
+            <span>PAN GRAVEL SILT</span>
+            <span class="act-cost">1 AP</span>
+          </div>
+          <div class="act-btn-desc">Swirl river mud in an iron pan. Yields silver grains and occasional bright gold flakes. Low risk.</div>
+        </button>
+
+        <button class="act-btn" onclick="actionRunSluice()" ${state.ap < 1 || state.wood < 8 ? 'disabled' : ''}>
+          <div class="act-btn-top">
+            <span>RUN SLUICE BOX</span>
+            <span class="act-cost">1 AP + 8 Wood</span>
+          </div>
+          <div class="act-btn-desc">Divert mountain water through riffle boards. Processes larger volumes of pay-dirt for solid gold ounces.</div>
+        </button>
+      </div>
+    </div>
+
+    <div class="panel-card">
+      <div class="panel-title-bar">
+        <div class="panel-title">UNDERGROUND DRIFT MINING</div>
+        <div class="panel-tag">HARD ROCK BEDROCK</div>
+      </div>
+      <p style="font-size:12px; color:var(--text-muted); margin-bottom:12px;">
+        Tunnel deep into granite quartz veins with pickaxe and black powder. Extreme yields, but carries real cave-in danger!
+      </p>
+      <button class="act-btn" onclick="actionDriftMine()" ${state.ap < 1 || state.powder < 1 ? 'disabled' : ''}>
+        <div class="act-btn-top">
+          <span>PICKAXE DRIFT TUNNELING</span>
+          <span class="act-cost">1 AP + 1 Powder</span>
+        </div>
+        <div class="act-btn-desc">Blast into the rock face. High chance for heavy silver ore, raw gold nuggets, and rare crystal geodes. Risk of injury.</div>
+      </button>
+    </div>
+  `;
+}
+
+/* 4. DEADWOOD TOWN & NATIVE ENCAMPMENT */
+function renderTownView(vp) {
+  // Gunsmith items
+  let armoryCards = ARMORY_CATALOG.map(g => {
+    const owned = state.gunsOwned.includes(g.id);
+    const isEquipped = state.equippedGun.id === g.id;
+    return `
+      <div class="bounty-card" style="border-color:#3a2012;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div style="font-weight:900; font-size:14px; color:#fff;">${g.name}</div>
+          <div style="font-size:11px; color:#e09849;">${g.drawBonus >= 0 ? '+'+g.drawBonus : g.drawBonus}ms Draw</div>
+        </div>
+        <p style="font-size:11px; color:var(--text-muted);">${g.desc}</p>
+        <div style="font-size:11px; color:#ccc;">Stopping Power: <strong>${g.lethal}x</strong></div>
+        <div style="margin-top:5px;">
+          ${owned 
+            ? `<button class="quick-btn" style="width:100%; text-align:center;" ${isEquipped ? 'disabled' : ''} onclick="equipGun('${g.id}')">
+                ${isEquipped ? 'EQUIPPED IN HOLSTER ✓' : 'DRAW & EQUIP'}
+               </button>`
+            : `<button class="quick-btn" style="width:100%; text-align:center;" onclick="buyGun('${g.id}')">
+                PURCHASE FOR $${g.cost} SILVER
+               </button>`
+          }
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  vp.innerHTML = `
+    <div class="panel-card">
+      <div class="panel-title-bar">
+        <div class="panel-title">DEADWOOD GENERAL STORE</div>
+        <div class="panel-tag">SUPPLIES & PROVISIONS</div>
+      </div>
+      <div class="action-grid two-col">
+        <button class="act-btn" onclick="buyStoreItem('powder', 4, 10)" ${state.silver < 4 ? 'disabled' : ''}>
+          <div class="act-btn-top"><span>BUY LEAD & POWDER (10ct)</span><span>$4</span></div>
+          <div class="act-btn-desc">Lead balls and Dupont black powder charges.</div>
+        </button>
+
+        <button class="act-btn" onclick="buyStoreItem('water', 3, 5)" ${state.silver < 3 ? 'disabled' : ''}>
+          <div class="act-btn-top"><span>BUY FRESH WATER BARREL (5ct)</span><span>$3</span></div>
+          <div class="act-btn-desc">Purified spring water for dry journeys.</div>
+        </button>
+
+        <button class="act-btn" onclick="buyStoreItem('food', 4, 6)" ${state.silver < 4 ? 'disabled' : ''}>
+          <div class="act-btn-top"><span>BUY DRY HARDTACK (6ct)</span><span>$4</span></div>
+          <div class="act-btn-desc">Cured flour biscuits and salt pork.</div>
+        </button>
+
+        <button class="act-btn" onclick="buyStoreItem('wood', 6, 20)" ${state.silver < 6 ? 'disabled' : ''}>
+          <div class="act-btn-top"><span>BUY SAWMILL TIMBER (20ct)</span><span>$6</span></div>
+          <div class="act-btn-desc">Finished pine planks from the steam mill.</div>
+        </button>
+      </div>
+
+      <div style="margin-top:14px; border-top:1px dashed var(--border-dark); padding-top:10px;">
+        <div style="font-weight:900; font-size:12px; margin-bottom:8px; color:#fff;">SELL COMMODITIES TO TRADER</div>
+        <div class="action-grid two-col">
+          <button class="act-btn" onclick="sellFur()" ${state.furs < 1 ? 'disabled' : ''}>
+            <div class="act-btn-top">
+              <span>SELL HARVESTED PELT</span>
+              <span>+$${state.outbuildings.skinningshed ? 25 : 20}</span>
+            </div>
+            <div class="act-btn-desc">Trade beaver or fox pelts. (Owned: ${state.furs})</div>
+          </button>
+
+          <button class="act-btn" onclick="sellTrinket()" ${state.trinkets < 1 ? 'disabled' : ''}>
+            <div class="act-btn-top"><span>PAWN OUTLAW TRINKET</span><span>+$45</span></div>
+            <div class="act-btn-desc">Pocket watches, card cases, flasks. (Owned: ${state.trinkets})</div>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel-card">
+      <div class="panel-title-bar">
+        <div class="panel-title">DEADWOOD GUNSMITH & ARMORY</div>
+        <div class="panel-tag">FIREARMS OF THE WEST</div>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:12px;">
+        ${armoryCards}
+      </div>
+    </div>
+
+    <div class="panel-card">
+      <div class="panel-title-bar">
+        <div class="panel-title">LAKOTA NATIVE TRADING POST</div>
+        <div class="panel-tag">TRADITIONAL EXCHANGE</div>
+      </div>
+      <p style="font-size:12px; color:var(--text-muted); margin-bottom:10px;">
+        The encampment rests beyond Whitewood Creek. They honor trade in undamaged furs, dried jerked meats, and ancient flint lithics.
+      </p>
+      <div class="action-grid two-col">
+        <button class="act-btn" onclick="tradeNativeGold()" ${state.furs < 4 ? 'disabled' : ''}>
+          <div class="act-btn-top"><span>TRADE 4 PRIME FURS</span><span>+1 oz GOLD</span></div>
+          <div class="act-btn-desc">Exchange winter furs for heavy stream gold nuggets.</div>
+        </button>
+
+        <button class="act-btn" onclick="tradeNativeHeal()" ${state.food < 4 ? 'disabled' : ''}>
+          <div class="act-btn-top"><span>TRADE 4 PROVISIONS</span><span>SNAKE-ROOT MEDICINE</span></div>
+          <div class="act-btn-desc">Herbal poultice that instantly cures 40 Hit Points.</div>
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+/* 5. BOUNTY BOARD VIEW (5 ACTIVE BOUNTIES) */
+function renderBountiesView(vp) {
+  if (state.dailyBounties.length === 0) {
+    generateDailyBounties();
+  }
+
+  let bountyCards = state.dailyBounties.map((b, idx) => {
+    let tierClass = b.tier === 'petty' ? 'tier-petty' : (b.tier === 'hardened' ? 'tier-hardened' : 'tier-deadly');
+    
+    return `
+      <div class="bounty-card">
+        <div class="bounty-tier-badge ${tierClass}">${b.tierName}</div>
+        <div class="bounty-name">${b.name}</div>
+        <div class="bounty-crime">"${b.crime}"</div>
+        <div class="bounty-details">
+          <div>FIREARM: <span>${b.firearm}</span></div>
+          <div>BOUNTY: <span style="color:#6aff85;">$${b.reward} SILVER</span></div>
+          <div>EST. REFLEX: <span>~${b.reaction}ms</span></div>
+          <div>RISK LEVEL: <span>${b.tier.toUpperCase()}</span></div>
+        </div>
+        ${b.alive 
+          ? `<button class="hunt-btn" onclick="stepIntoStreet(${idx})">TRACK & DUEL IN THE STREET</button>`
+          : `<div style="text-align:center; padding:8px; font-weight:900; color:#ba2f1d; border:1px dashed #ba2f1d;">DEFEATED IN THE DUST</div>`
+        }
+      </div>
+    `;
+  }).join('');
+
+  vp.innerHTML = `
+    <div class="panel-card">
+      <div class="panel-title-bar">
+        <div class="panel-title">TERRITORIAL MARSHAL'S BOUNTY BOARD</div>
+        <div class="panel-tag">5 DAILY WARRANTS</div>
+      </div>
+      <p style="font-size:12px; color:var(--text-muted); margin-bottom:12px; line-height:1.4;">
+        Wanted dead or alive. Stepping into the street will initiate high-noon reflex combat. When the bell tolls and <strong>DRAW!</strong> appears, click or strike spacebar immediately.
+      </p>
+      <div style="display:flex; flex-direction:column; gap:12px;">
+        ${bountyCards}
+      </div>
+    </div>
+  `;
+}
+
+/* =========================================================
+   ACTIONS: WILDS, PROSPECTING, HOMESTEAD
+   ========================================================= */
+function actionChopWood() {
+  if (state.ap < 1) return;
+  state.ap--;
+  const w = 7 + Math.floor(Math.random() * 6);
+  state.wood += w;
+  logDespatch(`Felled mountain pines with a double-bit axe. Harvested <em>+${w} cured timber</em>.`, 'ranch');
+  updateHUD();
+  renderCurrentTab();
+}
+
+function actionRestHeal() {
+  if (state.ap < 1 || state.food < 1) return;
+  state.ap--;
+  state.food--;
+  state.hp = Math.min(state.maxHp, state.hp + 25);
+  logDespatch(`Stoked the campfire, ate salt pork, and cleaned wound dressings. <em>+25 HP restored</em>.`, 'ranch');
+  updateHUD();
+  renderCurrentTab();
+}
+
+function upgradeHomestead() {
+  const next = HOMESTEAD_TIERS[state.homesteadTier + 1];
+  if (!next) return;
+  if (state.wood >= next.woodCost && state.silver >= next.silverCost) {
+    state.wood -= next.woodCost;
+    state.silver -= next.silverCost;
+    state.homesteadTier++;
+    state.maxHp += 10;
+    state.hp = state.maxHp;
+    logDespatch(`<strong>HOMESTEAD EXPANSION COMPLETED!</strong> Commissioned the ${next.name}. Max HP boosted to ${state.maxHp}.`, 'ranch');
+    updateHUD();
+    renderCurrentTab();
+  }
+}
+
+function buildOutbuilding(id) {
+  const ob = OUTBUILDING_DATA.find(o => o.id === id);
+  if (!ob || state.outbuildings[id]) return;
+  if (state.wood >= ob.wood && state.silver >= ob.silver) {
+    state.wood -= ob.wood;
+    state.silver -= ob.silver;
+    state.outbuildings[id] = true;
+    if (id === 'stables') {
+      state.maxAp = 7;
+      state.ap = 7;
+    }
+    logDespatch(`<strong>CONSTRUCTED:</strong> ${ob.name} now fully operational at your homestead!`, 'ranch');
+    updateHUD();
+    renderCurrentTab();
+  }
+}
+
+function actionHuntFirearm() {
+  if (state.ap < 1 || state.powder < 1) return;
+  state.ap--;
+  state.powder--;
+
+  const roll = Math.random();
+  if (roll > 0.3) {
+    const animals = [
+      { name: "Whitetail Stag", meat: 6, furs: 2 },
+      { name: "Rocky Mountain Elk", meat: 10, furs: 3 },
+      { name: "Black Bear", meat: 8, furs: 4 },
+      { name: "Bighorn Ram", meat: 7, furs: 2 }
+    ];
+    const target = pickRandom(animals);
+    let foodGain = target.meat;
+    if (state.outbuildings.smokehouse) foodGain = Math.floor(foodGain * 1.6);
+    
+    state.food += foodGain;
+    state.furs += target.furs;
+    logDespatch(`Gunfire echoed across Deadwood peak! Dropped a <strong>${target.name}</strong>. Harvested <em>+${foodGain} Provisions</em> and <em>+${target.furs} Pelts</em>.`, 'hunt');
+  } else {
+    logDespatch("Rifle shot clipped a boulder. The buck bolted into the timber.", 'hunt');
+  }
+  updateHUD();
+  renderCurrentTab();
+}
+
+function actionHuntBow() {
+  if (state.ap < 1) return;
+  state.ap--;
+
+  const roll = Math.random();
+  if (roll > 0.45) {
+    const animals = [
+      { name: "Whitetail Doe", meat: 5, furs: 3 },
+      { name: "Wild Turkey", meat: 4, furs: 1 },
+      { name: "Red Fox", meat: 3, furs: 4 },
+      { name: "Timber Wolf", meat: 4, furs: 5 }
+    ];
+    const target = pickRandom(animals);
+    let foodGain = target.meat;
+    if (state.outbuildings.smokehouse) foodGain = Math.floor(foodGain * 1.5);
+
+    state.food += foodGain;
+    state.furs += target.furs;
+
+    let artifactMsg = "";
+    if (Math.random() > 0.8) {
+      state.trinkets++;
+      artifactMsg = " While tracking the blood run, uncovered an ancient carved lithic spearhead (+1 Trinket)!";
+    }
+
+    logDespatch(`Clean arrow release in total silence. Took down a <strong>${target.name}</strong>. Harvested <em>+${foodGain} Provisions</em> and <em>+${target.furs} prime pelts</em>.${artifactMsg}`, 'hunt');
+  } else {
+    logDespatch("A pine twig snapped under your moccasin. The game vanished into the brush.", 'hunt');
+  }
+  updateHUD();
+  renderCurrentTab();
+}
+
+function actionSetTrapLine() {
+  if (state.ap < 1 || state.wood < 5) return;
+  state.ap--;
+  state.wood -= 5;
+  state.activeTrapsSet++;
+  logDespatch(`Crafted and anchored deadfall snares in the mountain draw. Traps will capture game overnight. Total active lines: ${state.activeTrapsSet}.`, 'hunt');
+  updateHUD();
+  renderCurrentTab();
+}
+
+function actionFish() {
+  if (state.ap < 1) return;
+  state.ap--;
+  const catchCount = 3 + Math.floor(Math.random() * 5);
+  state.food += catchCount;
+  logDespatch(`Wetted horsehair lines in the cool waters of Rapid Creek. Caught <em>${catchCount} Rainbow Trout</em>.`, 'hunt');
+  updateHUD();
+  renderCurrentTab();
+}
+
+function actionPanRiver() {
+  if (state.ap < 1) return;
+  state.ap--;
+  const roll = Math.random();
+  if (roll > 0.88) {
+    state.gold += 1;
+    logDespatch("<strong>GOLD STRIKE!</strong> Panned out a gleaming 1 oz raw gold nugget from the gravel bed!", 'mine');
+  } else if (roll > 0.45) {
+    const s = 6 + Math.floor(Math.random() * 8);
+    state.silver += s;
+    logDespatch(`Sifted dark river sand and recovered <em>+$${s} in silver flake</em>.`, 'mine');
+  } else {
+    logDespatch("Nothing in the pan but quartz sand and river mud.", 'mine');
+  }
+  updateHUD();
+  renderCurrentTab();
+}
+
+function actionRunSluice() {
+  if (state.ap < 1 || state.wood < 8) return;
+  state.ap--;
+  state.wood -= 8;
+  const roll = Math.random();
+  if (roll > 0.6) {
+    const oz = 1 + (Math.random() > 0.8 ? 1 : 0);
+    state.gold += oz;
+    const s = 10 + Math.floor(Math.random() * 15);
+    state.silver += s;
+    logDespatch(`The sluice run trapped heavy pay-dirt! <strong>+${oz} oz Gold</strong> and <em>+$${s} Silver</em>.`, 'mine');
+  } else {
+    const s = 5 + Math.floor(Math.random() * 8);
+    state.silver += s;
+    logDespatch(`Processed river muck through the box. Recovered small dust worth <em>+$${s} Silver</em>.`, 'mine');
+  }
+  updateHUD();
+  renderCurrentTab();
+}
+
+function actionDriftMine() {
+  if (state.ap < 1 || state.powder < 1) return;
+  state.ap--;
+  state.powder--;
+
+  const roll = Math.random();
+  // Cave-in risk
+  if (roll < 0.15) {
+    const dmg = 20 + Math.floor(Math.random() * 20);
+    state.hp -= dmg;
+    logDespatch(`<strong>MINE SHAFT CAVE-IN!</strong> Loose shale collapsed on your shoulder. Suffered ${dmg} damage!`, 'mine');
+    updateHUD();
+    renderCurrentTab();
+    return;
+  }
+
+  if (roll > 0.75) {
+    const g = 2;
+    const s = 25 + Math.floor(Math.random() * 25);
+    state.gold += g;
+    state.silver += s;
+    state.trinkets++;
+    logDespatch(`<strong>BONANZA!</strong> Blasted into a virgin quartz pocket. Extracted <strong>+${g} oz Gold</strong>, <em>+$${s} Silver</em>, and an uncut amethyst geode (+1 Trinket)!`, 'mine');
+  } else {
+    const s = 14 + Math.floor(Math.random() * 16);
+    state.silver += s;
+    logDespatch(`Pickaxe chipped through hard silver ore. Recovered <em>+$${s} Silver</em>.`, 'mine');
+  }
+  updateHUD();
+  renderCurrentTab();
+}
+
+/* Store Transactions */
+function buyStoreItem(type, cost, amt) {
+  if (state.silver < cost) return;
+  state.silver -= cost;
+  state[type] += amt;
+  logDespatch(`Purchased ${amt} ${type} at the Deadwood General Store for $${cost}.`, 'general');
+  updateHUD();
+  renderCurrentTab();
+}
+
+function sellFur() {
+  if (state.furs < 1) return;
+  state.furs--;
+  const val = state.outbuildings.skinningshed ? 25 : 20;
+  state.silver += val;
+  logDespatch(`Sold a cured fur pelt to the mercantile for <em>+$${val} Silver</em>.`, 'general');
+  updateHUD();
+  renderCurrentTab();
+}
+
+function sellTrinket() {
+  if (state.trinkets < 1) return;
+  state.trinkets--;
+  state.silver += 45;
+  logDespatch(`Pawned an outlaw pocket trinket for <em>+$45 Silver</em>.`, 'general');
+  updateHUD();
+  renderCurrentTab();
+}
+
+function buyGun(id) {
+  const g = ARMORY_CATALOG.find(x => x.id === id);
+  if (!g || state.gunsOwned.includes(id)) return;
+  if (state.silver >= g.cost) {
+    state.silver -= g.cost;
+    state.gunsOwned.push(id);
+    state.equippedGun = g;
+    logDespatch(`<strong>NEW FIREARM PURCHASED:</strong> Acquired and holstered the ${g.name}.`, 'general');
+    updateHUD();
+    renderCurrentTab();
+  }
+}
+
+function equipGun(id) {
+  const g = ARMORY_CATALOG.find(x => x.id === id);
+  if (g && state.gunsOwned.includes(id)) {
+    state.equippedGun = g;
+    logDespatch(`Holstered the <strong>${g.name}</strong>.`, 'general');
+    updateHUD();
+    renderCurrentTab();
+  }
+}
+
+function tradeNativeGold() {
+  if (state.furs >= 4) {
+    state.furs -= 4;
+    state.gold += 1;
+    logDespatch(`Traded 4 winter pelts with Lakota scouts for <strong>1 oz Pure Gold</strong>.`, 'hunt');
+    updateHUD();
+    renderCurrentTab();
+  }
+}
+
+function tradeNativeHeal() {
+  if (state.food >= 4) {
+    state.food -= 4;
+    state.hp = Math.min(state.maxHp, state.hp + 40);
+    logDespatch(`Traded 4 jerked provisions for snake-root poultice. Heals <em>+40 HP</em>.`, 'general');
+    updateHUD();
+    renderCurrentTab();
+  }
+}
+
+/* =========================================================
+   CANVAS HIGH NOON REFLEX DUEL ENGINE
+   ========================================================= */
+const canvas = document.getElementById('stage');
+const ctx = canvas.getContext('2d');
+const bannerMain = document.getElementById('banner-main');
+const bannerSub = document.getElementById('banner-sub');
+const duelLayer = document.getElementById('duel-layer');
+
+let activeDuelBounty = null;
+let activeDuelIndex = -1;
+let duelState = 'INIT'; // 'WAIT', 'DRAW', 'RESOLVED'
+let signalTimestamp = 0;
+let signalTimeout = null;
+let heartbeatTimer = null;
+let screenShake = 0;
+let flashAlpha = 0;
+let duelResult = null; // 'win', 'lose', 'foul'
+
+let dustParticles = [];
+let tumbleweed = { x: -60, y: 440, size: 22, speed: 2.4, rot: 0 };
+
+function initDust() {
+  dustParticles = [];
+  for (let i = 0; i < 45; i++) {
+    dustParticles.push({
+      x: Math.random() * canvas.width,
+      y: 340 + Math.random() * 190,
+      radius: Math.random() * 2.8 + 0.8,
+      speedX: Math.random() * 2.2 + 0.6
+    });
+  }
+}
+
+function stepIntoStreet(bountyIndex) {
+  audio.init();
+  activeDuelIndex = bountyIndex;
+  activeDuelBounty = state.dailyBounties[bountyIndex];
+
+  document.getElementById('player-gun-hud').textContent = state.equippedGun.name.toUpperCase();
+  document.getElementById('bounty-name-hud').textContent = `TARGET: ${activeDuelBounty.name.toUpperCase()}`;
+
+  duelLayer.style.display = 'flex';
+  initDust();
+
+  duelState = 'WAIT';
+  duelResult = null;
+  bannerMain.textContent = "STEADY...";
+  bannerMain.style.color = "#ffd187";
+  bannerSub.textContent = `Facing ${activeDuelBounty.name} (${activeDuelBounty.tierName})`;
+
+  audio.playTensionBell();
+
+  if (heartbeatTimer) clearInterval(heartbeatTimer);
+  heartbeatTimer = setInterval(() => {
+    if (duelState === 'WAIT') audio.playHeartbeat();
+  }, 850);
+
+  // Tense delay: 2.2 to 4.6 seconds
+  const delay = 2200 + Math.random() * 2400;
+  if (signalTimeout) clearTimeout(signalTimeout);
+  signalTimeout = setTimeout(() => {
+    if (duelState === 'WAIT') {
+      duelState = 'DRAW';
+      signalTimestamp = performance.now();
+      bannerMain.textContent = "DRAW!";
+      bannerMain.style.color = "#ff2200";
+      bannerSub.textContent = "CLICK OR PRESS SPACEBAR!";
+      audio.playDrawSignal();
+      flashAlpha = 0.6;
+      screenShake = 6;
+    }
+  }, delay);
+}
+
+function handleGunslingerTrigger() {
+  if (duelLayer.style.display !== 'flex') return;
+  audio.init();
+
+  if (duelState === 'WAIT') {
+    // FOUL DRAW
+    clearTimeout(signalTimeout);
+    clearInterval(heartbeatTimer);
+    duelState = 'RESOLVED';
+    duelResult = 'foul';
+
+    audio.playGunshot();
+    screenShake = 16;
+    flashAlpha = 0.95;
+    bannerMain.textContent = "FOUL DRAW!";
+    bannerMain.style.color = "#ff1100";
+    bannerSub.textContent = "You drew before the bell and misfired in panic!";
+
+    setTimeout(() => {
+      resolveDuelConclusion(false, 0, 0, true);
+    }, 2200);
+    return;
+  }
+
+  if (duelState === 'DRAW') {
+    duelState = 'RESOLVED';
+    clearInterval(heartbeatTimer);
+
+    const rawTime = performance.now() - signalTimestamp;
+    
+    // Weapon Draw Modifiers + Ranch Workbench
+    let weaponBonus = state.equippedGun.drawBonus;
+    if (state.outbuildings.gunbench) weaponBonus += 15;
+
+    let playerTime = Math.max(50, rawTime - weaponBonus);
+
+    // God mode cheat
+    if (state.godDrawEnabled) {
+      playerTime = 1;
+    }
+
+    // Opponent reaction roll
+    const opponentTime = activeDuelBounty.reaction + (Math.random() * activeDuelBounty.variance * 2 - activeDuelBounty.variance);
+
+    audio.playGunshot();
+    screenShake = 14;
+    flashAlpha = 0.8;
+
+    const diff = Math.abs(playerTime - opponentTime).toFixed(0);
+
+    if (playerTime <= opponentTime) {
+      // WIN
+      duelResult = 'win';
+      bannerMain.textContent = "DEAD EYE!";
+      bannerMain.style.color = "#44ff66";
+      bannerSub.textContent = `Your draw: ${Math.round(playerTime)}ms (${diff}ms faster than ${activeDuelBounty.name})`;
+
+      setTimeout(() => {
+        audio.playRicochet();
+        setTimeout(() => {
+          resolveDuelConclusion(true, Math.round(playerTime), diff, false);
+        }, 1100);
+      }, 1400);
+    } else {
+      // LOSE
+      duelResult = 'lose';
+      bannerMain.textContent = "TOO SLOW...";
+      bannerMain.style.color = "#ff2200";
+      bannerSub.textContent = `${activeDuelBounty.name} was ${diff}ms quicker to the hammer!`;
+
+      setTimeout(() => {
+        resolveDuelConclusion(false, Math.round(playerTime), diff, false);
+      }, 2300);
+    }
+  }
+}
+
+function resolveDuelConclusion(win, playerMs, diffMs, isFoul) {
+  duelLayer.style.display = 'none';
+
+  if (win) {
+    activeDuelBounty.alive = false;
+    state.bountiesDefeated++;
+    
+    // Payout adjusted by stopping power
+    const payout = Math.floor(activeDuelBounty.reward * state.equippedGun.lethal);
+    state.silver += payout;
+
+    // Loot procedural trinket
+    state.trinkets++;
+    const lootedItem = pickRandom(TRINKET_NAMES);
+
+    logDespatch(`<strong>DUEL WON!</strong> Shot down ${activeDuelBounty.name} in ${playerMs}ms (${diffMs}ms advantage). Claimed <em>+$${payout} bounty</em> and looted a <em>${lootedItem}</em> from the corpse.`, 'bounty');
+  } else {
+    const woundPenalty = isFoul ? 60 : 40;
+    state.hp -= woundPenalty;
+    const docBill = Math.min(state.silver, 25);
+    state.silver -= docBill;
+
+    if (isFoul) {
+      logDespatch(`<strong>FOUL DRAW DEFEAT:</strong> Shot down in the dirt by ${activeDuelBounty.name}. Sustained -${woundPenalty} HP and paid the surgeon $${docBill}.`, 'bounty');
+    } else {
+      logDespatch(`<strong>GUNFIGHT LOST:</strong> ${activeDuelBounty.name} drew ${diffMs}ms faster. Suffered -${woundPenalty} HP wound and lost $${docBill} in doctor's fee.`, 'bounty');
+    }
+  }
+
+  updateHUD();
+  renderCurrentTab();
+}
+
+/* --- CANVAS GRAPHICS RENDERING --- */
+function drawGunslinger(x, y, isFacingRight, isShot, isShooting, coatColor) {
+  ctx.save();
+  ctx.translate(x, y);
+  if (!isFacingRight) ctx.scale(-1, 1);
+
+  if (isShot) {
+    ctx.rotate(0.35);
+    ctx.translate(0, 40);
+  }
+
+  // Shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.5)';
+  ctx.beginPath();
+  ctx.ellipse(0, 0, 45, 12, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = isShot ? '#290b07' : (coatColor || '#140c08');
+
+  // Boots
+  ctx.fillRect(-16, -20, 10, 20);
+  ctx.fillRect(6, -20, 10, 20);
+
+  // Trousers
+  ctx.fillRect(-15, -70, 12, 55);
+  ctx.fillRect(3, -70, 12, 55);
+
+  // Duster coat
+  ctx.beginPath();
+  ctx.moveTo(-20, -120);
+  ctx.lineTo(20, -120);
+  ctx.lineTo(26, -30);
+  ctx.lineTo(-24, -30);
+  ctx.fill();
+
+  // Torso / Vest
+  ctx.fillRect(-16, -125, 32, 55);
+
+  // Head
+  ctx.beginPath();
+  ctx.arc(0, -145, 11, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Stetson Hat
+  ctx.beginPath();
+  ctx.ellipse(0, -153, 27, 5, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillRect(-11, -168, 22, 16);
+
+  // Gun Arm
+  if (isShooting) {
+    ctx.fillRect(10, -118, 40, 8);
+    ctx.fillStyle = '#0a0503';
+    ctx.fillRect(48, -125, 16, 10);
+    // Muzzle flare
+    ctx.fillStyle = '#fff48d';
+    ctx.beginPath();
+    ctx.arc(67, -121, 14, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#ff6000';
+    ctx.beginPath();
+    ctx.arc(70, -121, 8, 0, Math.PI * 2);
+    ctx.fill();
+  } else {
+    ctx.beginPath();
+    ctx.moveTo(12, -115);
+    ctx.lineTo(22, -85);
+    ctx.lineTo(16, -75);
+    ctx.lineTo(8, -115);
+    ctx.fill();
+    // Holstered revolver handle
+    ctx.fillStyle = '#3c1d0e';
+    ctx.fillRect(15, -82, 8, 14);
+  }
+
+  ctx.restore();
+}
+
+function updateAndRenderCanvas() {
+  if (duelLayer.style.display !== 'none') {
+    let shakeX = 0, shakeY = 0;
+    if (screenShake > 0) {
+      shakeX = (Math.random() - 0.5) * screenShake * 4;
+      shakeY = (Math.random() - 0.5) * screenShake * 4;
+      screenShake--;
+    }
+
+    ctx.save();
+    ctx.translate(shakeX, shakeY);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Deep Deadwood Twilight Gradient
+    const skyGrad = ctx.createLinearGradient(0, 0, 0, 360);
+    skyGrad.addColorStop(0, '#1c0702');
+    skyGrad.addColorStop(0.35, '#621a0c');
+    skyGrad.addColorStop(0.7, '#a53616');
+    skyGrad.addColorStop(1, '#cb581f');
+    ctx.fillStyle = skyGrad;
+    ctx.fillRect(0, 0, canvas.width, 360);
+
+    // Horizon Sun
+    ctx.fillStyle = 'rgba(255, 230, 160, 0.35)';
+    ctx.beginPath();
+    ctx.arc(canvas.width / 2, 280, 110, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Distant Black Hills Mesas
+    ctx.fillStyle = '#3a1309';
+    ctx.beginPath();
+    ctx.moveTo(0, 320);
+    ctx.lineTo(80, 270);
+    ctx.lineTo(190, 270);
+    ctx.lineTo(240, 320);
+    ctx.lineTo(440, 320);
+    ctx.lineTo(510, 250);
+    ctx.lineTo(660, 250);
+    ctx.lineTo(720, 320);
+    ctx.lineTo(900, 320);
+    ctx.lineTo(900, 360);
+    ctx.lineTo(0, 360);
+    ctx.fill();
+
+    // Dirt Street
+    const groundGrad = ctx.createLinearGradient(0, 360, 0, canvas.height);
+    groundGrad.addColorStop(0, '#422110');
+    groundGrad.addColorStop(0.3, '#271307');
+    groundGrad.addColorStop(1, '#0e0602');
+    ctx.fillStyle = groundGrad;
+    ctx.fillRect(0, 360, canvas.width, 200);
+
+    // Western Building Silhouettes
+    ctx.fillStyle = '#170a04';
+    ctx.fillRect(0, 220, 120, 150);
+    ctx.fillRect(canvas.width - 130, 200, 130, 170);
+    ctx.fillRect(115, 240, 45, 25);
+
+    // Tumbleweed
+    tumbleweed.x += tumbleweed.speed;
+    tumbleweed.rot += 0.05;
+    if (tumbleweed.x > canvas.width + 60) tumbleweed.x = -60;
+    ctx.save();
+    ctx.translate(tumbleweed.x, tumbleweed.y);
+    ctx.rotate(tumbleweed.rot);
+    ctx.strokeStyle = '#321a0e';
+    ctx.lineWidth = 2;
+    for (let i = 0; i < 6; i++) {
+      ctx.strokeRect(-tumbleweed.size / 2, -tumbleweed.size / 2, tumbleweed.size, tumbleweed.size);
+      ctx.rotate(Math.PI / 6);
+    }
+    ctx.restore();
+
+    // Wind dust particles
+    ctx.fillStyle = 'rgba(235, 180, 110, 0.25)';
+    dustParticles.forEach(p => {
+      p.x += p.speedX;
+      if (p.x > canvas.width) p.x = 0;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    // Determine Gunslinger states
+    const pShoot = duelResult === 'win' || duelResult === 'foul';
+    const pDead = duelResult === 'lose' || duelResult === 'foul';
+    const eShoot = duelResult === 'lose' || duelResult === 'foul';
+    const eDead = duelResult === 'win';
+
+    // Player Gunslinger (Left)
+    drawGunslinger(240, 450, true, pDead, pShoot, '#162319');
+
+    // Enemy Outlaw (Right)
+    drawGunslinger(660, 450, false, eDead, eShoot, '#4f2415');
+
+    // Muzzle flash / death overlay
+    if (flashAlpha > 0) {
+      ctx.fillStyle = `rgba(255, 235, 210, ${flashAlpha})`;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      flashAlpha -= 0.06;
+    }
+
+    ctx.restore();
+  }
+  requestAnimationFrame(updateAndRenderCanvas);
+}
+requestAnimationFrame(updateAndRenderCanvas);
+
+/* Input bindings for high noon duel */
+window.addEventListener('keydown', (e) => {
+  if (e.code === 'Space') {
+    e.preventDefault();
+    handleGunslingerTrigger();
+  }
+});
+canvas.addEventListener('pointerdown', (e) => {
+  e.preventDefault();
+  handleGunslingerTrigger();
+});
+
+/* =========================================================
+   MODAL CONTROLS & GOD CONSOLE CHEATS
+   ========================================================= */
+function openManual() {
+  document.getElementById('manual-modal').style.display = 'flex';
+}
+function closeManual() {
+  document.getElementById('manual-modal').style.display = 'none';
+}
+
+function openGodMode() {
+  document.getElementById('god-modal').style.display = 'flex';
+}
+function closeGodMode() {
+  document.getElementById('god-modal').style.display = 'none';
+}
+
+function cheatAddFunds() {
+  state.silver += 1000;
+  state.gold += 50;
+  logDespatch("⚡ <strong>GOD MODE:</strong> Stashed $1,000 Silver & 50 oz Pure Gold.", 'mine');
+  updateHUD();
+}
+
+function cheatFullVigor() {
+  state.hp = state.maxHp;
+  state.ap = state.maxAp;
+  logDespatch("⚡ <strong>GOD MODE:</strong> Hit Points and Action Points fully restored.", 'general');
+  updateHUD();
+}
+
+function cheatStockpile() {
+  state.wood += 500;
+  state.food += 100;
+  state.water += 100;
+  state.powder += 50;
+  logDespatch("⚡ <strong>GOD MODE:</strong> Supply train arrived: +500 Wood, +100 Food, +100 Water, +50 Powder.", 'ranch');
+  updateHUD();
+}
+
+function cheatMaxHomestead() {
+  state.homesteadTier = 4;
+  state.maxHp = 140;
+  state.hp = 140;
+  Object.keys(state.outbuildings).forEach(k => state.outbuildings[k] = true);
+  state.maxAp = 7;
+  state.ap = 7;
+  logDespatch("⚡ <strong>GOD MODE:</strong> Fully constructed Grand Cattle Ranch & all 6 Outbuildings.", 'ranch');
+  updateHUD();
+  renderCurrentTab();
+}
+
+function cheatUnlockGuns() {
+  ARMORY_CATALOG.forEach(g => {
+    if (!state.gunsOwned.includes(g.id)) state.gunsOwned.push(g.id);
+  });
+  state.equippedGun = ARMORY_CATALOG[3]; // Equip Peacemaker
+  logDespatch("⚡ <strong>GOD MODE:</strong> Unlocked entire historical armory. Colt Peacemaker equipped.", 'general');
+  updateHUD();
+  renderCurrentTab();
+}
+
+function cheatToggleGodDraw() {
+  state.godDrawEnabled = !state.godDrawEnabled;
+  document.getElementById('god-draw-status').textContent = `Status: 1ms Reflexes ${state.godDrawEnabled ? 'ACTIVE (GOD TIER)' : 'INACTIVE'}`;
+  logDespatch(`⚡ <strong>GOD MODE:</strong> God Draw Reflex set to ${state.godDrawEnabled ? 'ACTIVE' : 'INACTIVE'}.`, 'bounty');
+}
+
+function cheatRerollBounties() {
+  generateDailyBounties();
+  logDespatch("⚡ <strong>GOD MODE:</strong> 5 fresh warrants posted on the Bounty Board.", 'bounty');
+  renderCurrentTab();
+}
+
+function showCustomModal(title, bodyHTML) {
+  const modal = document.createElement('div');
+  modal.className = 'modal-backdrop';
+  modal.style.display = 'flex';
+  modal.innerHTML = `
+    <div class="modal-window">
+      <div class="modal-header">
+        <div class="modal-title">${title}</div>
+      </div>
+      <div class="modal-body">
+        ${bodyHTML}
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+}
+
+/* =========================================================
+   INITIALIZATION
+   ========================================================= */
+generateDailyBounties();
+updateHUD();
+renderCurrentTab();
+
+logDespatch("<strong>Rode into the Deadwood Gulch.</strong> Staked a rough claim above the creek. The air smells of pine resin, campfire smoke, and imminent gunfire.", 'general');
+logDespatch("Check the <em>Bounty Board</em> for warrants or fell timber to expand your homestead.", 'ranch');
+</script>
+</body>
+</html>
